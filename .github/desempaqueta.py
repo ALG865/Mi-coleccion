@@ -1,6 +1,7 @@
 import os, glob, shutil, struct
 os.makedirs('_site/f', exist_ok=True)
-for f in ('index.html', 'app.enc'): shutil.copy(f, '_site/' + f)
+for f in ('index.html', 'app.enc', 'manifest.json', 'icono-180.png', 'icono-192.png', 'icono-512.png'):
+    if os.path.exists(f): shutil.copy(f, '_site/' + f)
 open('_site/.nojekyll', 'w').close()
 for p in glob.glob('p/*.bin'):
     b = open(p, 'rb').read(); i = 0
