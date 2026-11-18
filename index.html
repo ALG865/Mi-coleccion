@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Mi colección</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111;color:#eee;font:17px system-ui,sans-serif}
+form{width:min(340px,90vw);text-align:center}
+h1{font:italic 28px Georgia,serif;color:#e8d5a8;margin:0 0 18px}
+input[type=password]{width:100%;box-sizing:border-box;padding:12px;font-size:18px;border-radius:10px;border:1px solid #555;background:#222;color:#fff}
+button{margin-top:12px;width:100%;padding:12px;font-size:17px;border:0;border-radius:10px;background:#c9a96e;color:#111;font-weight:600}
+label{display:block;margin-top:12px;font-size:15px;color:#bbb}
+#err{color:#f88;min-height:1.4em;margin-top:10px}
+</style></head><body>
+<form id="f"><h1>Mi colección</h1>
+<input type="password" id="p" placeholder="Contraseña" autocomplete="current-password" autofocus>
+<label><input type="checkbox" id="r" checked> Recordar en este aparato</label>
+<button>Entrar</button><div id="err"></div></form>
+<script>
+const SAL='958f9a6a6371bdbe9b6d0a15f8cb7460',ITER=300000,LS='coleccion_clave_'+SAL;
+const b64=u=>{let s='';for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
+async function abre(raw,rec){
+  const k=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
+  const b=new Uint8Array(await (await fetch('app.enc',{cache:'no-cache'})).arrayBuffer());
+  const html=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},k,b.slice(12)));
+  if(rec){try{localStorage.setItem(LS,b64(raw))}catch(e){}}
+  document.open();document.write(html.replace('__CLAVE__',b64(raw)));document.close();
+}
+async function deriva(p){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(p),'PBKDF2',false,['deriveBits']);
+  const sal=new Uint8Array(SAL.match(/../g).map(h=>parseInt(h,16)));
+  return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:sal,iterations:ITER},base,256));
+}
+let g=null;try{g=localStorage.getItem(LS)}catch(e){}
+if(g){abre(Uint8Array.from(atob(g),c=>c.charCodeAt(0)),false).catch(()=>{try{localStorage.removeItem(LS)}catch(e){}})}
+document.getElementById('f').onsubmit=async e=>{
+  e.preventDefault();const err=document.getElementById('err');err.textContent='Abriendo…';
+  const rec=document.getElementById('r').checked;
+  try{const raw=await deriva(document.getElementById('p').value);await abre(raw,rec)}
+  catch(x){err.textContent='Contraseña incorrecta'}
+};
+</script></body></html>
